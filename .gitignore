@@ -9,6 +9,7 @@ wandb/
 .cache
 local/
 outputs/
+runtime/
 
 *.pt
 *.ckpt
