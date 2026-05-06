@@ -14,13 +14,15 @@ set "PY_URL=https://mirrors.tuna.tsinghua.edu.cn/python/3.10.11/python-3.10.11-a
 set "PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple"
 set "HF_ENDPOINT=https://hf-mirror.com"
 set "MODEL_DIR=%~dp0pretrained_models\SoulX-Singer"
+set "PREPROCESS_DIR=%~dp0pretrained_models\SoulX-Singer-Preprocess"
 set "DEPS_MARKER=%RUNTIME_DIR%\.requirements-installed"
 
 if not exist "%RUNTIME_DIR%" mkdir "%RUNTIME_DIR%"
 if not exist "%~dp0pretrained_models" mkdir "%~dp0pretrained_models"
 
 call :CheckModel
-if exist "%PY_EXE%" if exist "%DEPS_MARKER%" if "!MODEL_READY!"=="1" goto Launch
+call :CheckPreprocess
+if exist "%PY_EXE%" if exist "%DEPS_MARKER%" if "!MODEL_READY!"=="1" if "!PREPROCESS_READY!"=="1" goto Launch
 
 echo.
 echo [1/4] Preparing portable Python 3.10.11...
@@ -69,6 +71,16 @@ if not "!MODEL_READY!"=="1" (
         if errorlevel 1 goto Error
     )
 )
+call :CheckPreprocess
+if not "!PREPROCESS_READY!"=="1" (
+    if exist "%HF_EXE%" (
+        "%HF_EXE%" download Soul-AILab/SoulX-Singer-Preprocess --local-dir "%PREPROCESS_DIR%"
+        if errorlevel 1 goto Error
+    ) else (
+        "%PY_EXE%" -m huggingface_hub.commands.huggingface_cli download Soul-AILab/SoulX-Singer-Preprocess --local-dir "%PREPROCESS_DIR%"
+        if errorlevel 1 goto Error
+    )
+)
 
 :Launch
 echo.
@@ -95,6 +107,11 @@ goto :eof
 :CheckModel
 set "MODEL_READY=0"
 if exist "%MODEL_DIR%\model-svc.pt" if exist "%MODEL_DIR%\config.yaml" set "MODEL_READY=1"
+goto :eof
+
+:CheckPreprocess
+set "PREPROCESS_READY=0"
+if exist "%PREPROCESS_DIR%\rmvpe\rmvpe.pt" if exist "%PREPROCESS_DIR%\mel-band-roformer-karaoke\mel_band_roformer_karaoke_becruily.ckpt" if exist "%PREPROCESS_DIR%\parakeet-tdt-0.6b-v2\parakeet-tdt-0.6b-v2.nemo" if exist "%PREPROCESS_DIR%\rosvot\rosvot\model.pt" set "PREPROCESS_READY=1"
 goto :eof
 
 :Error
